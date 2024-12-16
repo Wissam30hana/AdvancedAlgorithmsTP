@@ -1,205 +1,85 @@
-## TODO: TP should be HERE
-import pandas as pd
-from tqdm import tqdm
-
-import sys
-from pathlib import Path
-
-# Add parent directory to path
-sys.path.append(str(Path(__file__).parent.parent))
-
-from complexity import (
-    DataGeneratorFactory,
-    RandomDataGenerator,
-    LinearDataGenerator,
-    TimeAndSpaceProfiler,
-    ComplexityAnalyzer,
-    ComplexityVisualizer,
-    ComplexityDashboardVisualizer
-)
-
-from collections import namedtuple
-
-## TODO: Data Generation
-
-# Set up data generators
-factory = DataGeneratorFactory()
-factory.register_generator("random", RandomDataGenerator(0, 100))
-factory.register_generator("sorted", LinearDataGenerator())
-
-# Data generation
-#lengths = [10, 100, 1000, 10000]
-lengths = [10, 100, 1000]
-nbr_experiments = 3
-
-# Generate arrays for each length and experiment
-random_arrays = [
-    [factory.get_generator("random").generate(size) for _ in range(nbr_experiments)]
-    for size in lengths
-]
-
-sorted_arrays = [
-    [factory.get_generator("sorted").generate(size) for _ in range(nbr_experiments)]
-    for size in lengths
-]
-
-inverse_sorted_arrays = [
-    [list(reversed(factory.get_generator("sorted").generate(size))) for _ in range(nbr_experiments)]
-    for size in lengths
-]
-
-
-Metrics = namedtuple('Metrics', ['n','comparison_count', 'move_count'])
-
-def selection_sort(arr):
-    comparisons = 0
-    move_count = 0
-    n = len(arr)
-
-    for i in range(len(arr)):
-        min_index = i
-        for j in range(i + 1, len(arr)):
-            comparisons += 1
-            if arr[j] < arr[min_index]:
-                min_index = j
-        if min_index != i:
-            arr[i], arr[min_index] = arr[min_index], arr[i]
-            move_count += 1
-
-    return Metrics(n,comparisons, move_count)
-
-## TODO: Complete the code
-
-def bubble_sort(arr):
-    comparisons = 0
-    move_count = 0
-    n = len(arr)
-
-    for i in range(n):
-        # Add a flag to track if any swaps occurred in this pass
-        swapped = False
-        for j in range(0, n - i - 1):
-            comparisons += 1
-            if arr[j] > arr[j + 1]:
-                # Swap elements
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-                move_count += 1
-                swapped = True
-        
-        # If no swapping occurred, array is already sorted
-        if not swapped:
-            break
-
-    return Metrics(n, comparisons, move_count)
-
-def insertion_sort_shifting(arr):
-    comparisons = 0
-    move_count = 0
-    n = len(arr)
-
-    for i in range(1, n):
-        key = arr[i]
-        j = i - 1
-
-        # Track comparisons explicitly
-        while j >= 0:
-            comparisons += 1  # Count every comparison
-            if arr[j] > key:
-                arr[j + 1] = arr[j]  # Shift
-                move_count += 1
-                j -= 1
+def lcs_recursive(X, Y, m, n):
+    if m == 0 or n == 0:
+        return 0
+    if X[m - 1] == Y[n - 1]:
+        return 1 + lcs_recursive(X, Y, m - 1, n - 1)
+    else:
+        return max(lcs_recursive(X, Y, m - 1, n), lcs_recursive(X, Y, m, n - 1))
+    
+    def lcs_memoization(X, Y, m, n, memo):
+    if m == 0 or n == 0:
+        return 0
+    if (m, n) in memo:
+        return memo[(m, n)]
+    if X[m - 1] == Y[n - 1]:
+        memo[(m, n)] = 1 + lcs_memoization(X, Y, m - 1, n - 1, memo)
+    else:
+        memo[(m, n)] = max(lcs_memoization(X, Y, m - 1, n, memo), lcs_memoization(X, Y, m, n - 1, memo))
+    return memo[(m, n)]
+def lcs_dynamic_programming(X, Y):
+    m, n = len(X), len(Y)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if X[i - 1] == Y[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1] + 1
             else:
-                break  # Stop shifting when in correct position
-
-        arr[j + 1] = key
-
-    return Metrics(n, comparisons, move_count)
-
-def insertion_sort_exchange(arr):
-    comparisons = 0
-    move_count = 0
-    n = len(arr)
-
-    for i in range(1, n):
-        j = i
-        while j > 0 and arr[j] < arr[j - 1]:
-            comparisons += 1
-            arr[j], arr[j - 1] = arr[j - 1], arr[j]  # Swap
-            move_count += 1
+                dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+    
+    # Retrieving the LCS from the DP table
+    lcs = []
+    i, j = m, n
+    while i > 0 and j > 0:
+        if X[i - 1] == Y[j - 1]:
+            lcs.append(X[i - 1])
+            i -= 1
             j -= 1
+        elif dp[i - 1][j] >= dp[i][j - 1]:
+            i -= 1
+        else:
+            j -= 1
+    
+    return ''.join(reversed(lcs))
+import random
 
-        if j > 0:
-            comparisons += 1
+class StringGenerator:
+    def __init__(self, alphabet=['A', 'B', 'C']):
+        self.alphabet = alphabet
 
-    return Metrics(n,comparisons, move_count)
+    def generate(self, size: int = 1) -> str:
+        return ''.join(random.choice(self.alphabet) for _ in range(size))
+    
+    def generate_pair(self, size1: int, size2: int):
+        return self.generate(size1), self.generate(size2)
+    
+    def generate_similar_pair(self, size1: int, size2: int):
+        str1 = self.generate(size1)
+        str2 = str1[:size2]  # Make the second string a prefix of the first
+        return str1, str2
+    
+    def generate_different_pair(self, size1: int, size2: int):
+        str1 = self.generate(size1)
+        str2 = self.generate(size2)
+        return str1, str2
+X = "ABCBDAB"
+Y = "BDCAB"
 
-# Algorithms to benchmark
-funcs = [
-    selection_sort,
-    bubble_sort,
-    insertion_sort_shifting,
-    insertion_sort_exchange,
-]
+print(lcs_recursive(X, Y, len(X), len(Y)))  # يجب أن يعرض 4
+memo = {}
 
-# Benchmarking
-profiler = TimeAndSpaceProfiler()
-results = []
+print(lcs_memoization(X, Y, len(X), len(Y), memo))  # يجب أن يعرض 4
 
-# Create a tqdm progress bar for tracking the experiments
-total_iterations = len(funcs) * len(lengths) * nbr_experiments * 3  # 3 for random, sorted, inverse_sorted
-with tqdm(total=total_iterations, desc="Benchmarking", unit="experiment") as pbar:
+print(lcs_dynamic_programming(X, Y))  # يجب أن يعرض "BCAB" أو "BDAB"
 
-    for func in funcs:
-        for size, random_experiments, sorted_experiments, inverse_sorted_experiments in zip(
-            lengths, random_arrays, sorted_arrays, inverse_sorted_arrays
-        ):
-            for experiment_idx in range(nbr_experiments):
-                for data, label in [
-                    (random_experiments[experiment_idx], "random"),
-                    (sorted_experiments[experiment_idx], "sorted"),
-                    (inverse_sorted_experiments[experiment_idx], "inverse_sorted"),
-                ]:
-                    # Run and profile
-                    logs = profiler.profile(func, data)
-                    logs.update({
-                        "algorithm": func.__name__,
-                        "data_type": label,
-                        "size": size,
-                        "experiment": experiment_idx + 1,
-                    })
-                    results.append(logs)
+gen = StringGenerator(['A', 'C', 'G', 'T'])
+print(gen.generate(10))  # مثال: "ACGTACGTAC"
 
-                    # Update tqdm progress bar with custom message
-                    pbar.set_postfix({
-                        'algorithm': func.__name__,
-                        'data_type': label,
-                        'size': size,
-                        'experiment': experiment_idx + 1,
-                    })
-                    pbar.update(1)
+str1, str2 = gen.generate_pair(5, 8)
+print(str1, str2)
 
-# Convert results to a pandas DataFrame
-df = pd.DataFrame(results)
+str1, str2 = gen.generate_similar_pair(6, 6)
+print(str1, str2)
 
-# Write the DataFrame to a CSV file
-csv_filename = "benchmark_results.csv"
-df.to_csv(csv_filename, index=False)
-
-
-# Data Preprocessing: Convert time and memory columns to numeric
-df['time'] = pd.to_numeric(df['time'], errors='coerce')
-df['memory'] = pd.to_numeric(df['memory'], errors='coerce')
-
-# Grouping by algorithm, data_type, and size
-grouped = df.groupby(['algorithm', 'data_type', 'size']).agg({
-    'time': 'mean',
-    'memory': 'mean',
-    'comparison_count': 'mean',
-    'move_count': 'mean'
-}).reset_index()
-
-# Save both raw and grouped results for later analysis
-df.to_csv('sort_results_raw.csv', index=False)
-grouped.to_csv('sort_results_grouped.csv', index=False)
-
-print("\nResults have been saved to 'sort_results_raw.csv' and 'sort_results_grouped.csv'")
+str1, str2 = gen.generate_different_pair(6, 8)
+print(str1, str2)
