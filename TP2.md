@@ -1,46 +1,104 @@
+import time
+import random
 
-# TP 2: Experimental Study of Simple Sorting Algorithms
+# Fonction pour mesurer le temps d'exécution
+def mesurer_temps(fonction, *args):
+    debut = time.perf_counter()
+    resultat = fonction(*args)
+    fin = time.perf_counter()
+    return resultat, fin - debut
 
-This practical session (TP) focuses on the experimental study of simple sorting algorithms (selection sort, bubble sort, and insertion sort with two variants). Here’s a structured approach to guide students in comparing these algorithms:
+# 1. Tri par sélection
+def tri_selection(tableau):
+    comparaisons, mouvements = 0, 0
+    n = len(tableau)
+    for i in range(n):
+        min_indice = i
+        for j in range(i + 1, n):
+            comparaisons += 1
+            if tableau[j] < tableau[min_indice]:
+                min_indice = j
+        if min_indice != i:
+            tableau[i], tableau[min_indice] = tableau[min_indice], tableau[i]
+            mouvements += 1
+    return tableau, comparaisons, mouvements
 
-## 1. Learning Objectives
-- Implement simple sorting algorithms studied in tutorials -TD-.
-- Compare the performance of these algorithms by measuring the number of comparisons, the number of moves, and CPU execution time.
-- Analyze the impact of the initial data arrangement (random, ascending order, descending order).
+# 2. Tri à bulles
+def tri_bulles(tableau):
+    comparaisons, mouvements = 0, 0
+    n = len(tableau)
+    for i in range(n):
+        for j in range(0, n - i - 1):
+            comparaisons += 1
+            if tableau[j] > tableau[j + 1]:
+                tableau[j], tableau[j + 1] = tableau[j + 1], tableau[j]
+                mouvements += 1
+    return tableau, comparaisons, mouvements
 
-Here’s a quick review of the algorithms:
-- **Selection Sort**: Finds the minimum in the unsorted part of the array and swaps it with the first element of this part.
-- **Bubble Sort**: Compares each pair of adjacent elements and swaps them if necessary, repeating the process until the array is sorted.
-- **Insertion Sort (by exchanges)**: Inserts each element in its appropriate position through successive exchanges.
-- **Insertion Sort (by shifting)**: Shifts larger elements to make room for the direct insertion of a new element.
+# 3. Tri par insertion (par échanges)
+def tri_insertion_echanges(tableau):
+    comparaisons, mouvements = 0, 0
+    n = len(tableau)
+    for i in range(1, n):
+        j = i
+        while j > 0 and tableau[j] < tableau[j - 1]:
+            comparaisons += 1
+            tableau[j], tableau[j - 1] = tableau[j - 1], tableau[j]
+            mouvements += 1
+            j -= 1
+        if j > 0:
+            comparaisons += 1
+    return tableau, comparaisons, mouvements
 
-## 2. Preparing Test Data
-- **Generating Arrays**: Create arrays of various sizes (e.g., 1,000; 10,000; 100,000; 1,000,000 elements) to observe scalability.
-- **Sorting Scenarios**: Generate three types of arrays for each size:
-  - **Random**: Values without any specific order.
-  - **Sorted in Ascending Order**: To observe algorithm behavior when the array is already sorted.
-  - **Sorted in Descending Order**: To analyze performance in the worst case, especially for algorithms like bubble sort.
+# 4. Tri par insertion (par décalages)
+def tri_insertion_decalages(tableau):
+    comparaisons, mouvements = 0, 0
+    n = len(tableau)
+    for i in range(1, n):
+        valeur_courante = tableau[i]
+        j = i - 1
+        while j >= 0 and tableau[j] > valeur_courante:
+            comparaisons += 1
+            tableau[j + 1] = tableau[j]
+            mouvements += 1
+            j -= 1
+        tableau[j + 1] = valeur_courante
+        mouvements += 1
+        if j >= 0:
+            comparaisons += 1
+    return tableau, comparaisons, mouvements
 
-## 3. Sorting Algorithm Implementation
-- Students should implement each algorithm with counters for:
-  - **Comparisons**: Number of comparisons between elements.
-  - **Moves**: Number of times an element is moved or swapped.
-  - **CPU Time**: Use a timer to measure the execution time of each algorithm.
+# Générer un tableau
+def generer_tableau(taille, ordre="aleatoire"):
+    if ordre == "aleatoire":
+        return [random.randint(1, taille * 10) for _ in range(taille)]
+    elif ordre == "ascendant":
+        return list(range(1, taille + 1))
+    elif ordre == "descendant":
+        return list(range(taille, 0, -1))
 
-## 4. Data Measurement and Collection
-For each algorithm and array type:
-- Execute over 30 tests to reduce statistical variation.
-- Collect:
-  - Average number of comparisons.
-  - Average number of moves/swaps.
-  - Average CPU time.
-- Organize these results into comparative tables to facilitate analysis.
+# Exécuter les tests
+def executer_tests():
+    tailles = [1000, 10000, 100000]
+    ordres = ["aleatoire", "ascendant", "descendant"]
+    algorithmes = {
+        "Tri par sélection": tri_selection,
+        "Tri à bulles": tri_bulles,
+        "Tri par insertion (échanges)": tri_insertion_echanges,
+        "Tri par insertion (décalages)": tri_insertion_decalages
+    }
+    
+    for taille in tailles:
+        for ordre in ordres:
+            tableau_original = generer_tableau(taille, ordre)
+            print(f"\nTaille: {taille}, Ordre: {ordre}")
+            
+            for nom_algo, algo in algorithmes.items():
+                tableau = tableau_original[:]
+                _, temps_execution = mesurer_temps(algo, tableau)
+                tableau_trie, comparaisons, mouvements = algo(tableau)
+                print(f"{nom_algo}: Comparaisons={comparaisons}, Mouvements={mouvements}, Temps={temps_execution:.4f} secondes")
 
-## 5. Results Analysis
-- **Comparisons and Moves**: Compare how different types of arrays (random, sorted, reverse sorted) affect the number of comparisons and moves.
-- **CPU Time**: Compare execution times and identify the most efficient algorithms for each array type.
-- **Complexity**: Relate observations to the theoretical complexity of the algorithms, such as O(n²) for these simple sorts, and see if the experimental results confirm this complexity.
-
-## 6. Conclusion and Interpretation
-- Compare the strengths and weaknesses of each algorithm based on the sorting scenarios.
-- Summarize the conditions in which one algorithm would be preferable to another.
+# Lancer les tests git status
+if __name__ == "__main__":
+    executer_tests()
